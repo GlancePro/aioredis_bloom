@@ -1,16 +1,6 @@
-aioredis_bloom
+aioredis_bloom with redis pipeline support
 ==============
-.. image:: https://travis-ci.org/jettify/aioredis_bloom.svg
-    :target: https://travis-ci.org/jettify/aioredis_bloom
-    :alt: |Build status|
-.. image:: https://coveralls.io/repos/jettify/aioredis_bloom/badge.png?branch=master
-    :target: https://coveralls.io/r/jettify/aioredis_bloom?branch=master
-    :alt: |Coverage status|
-
-A simple Bloom_ filter written in Python 3 with asyncio_ using, redis
-( aioredis_ ) as storage and the Murmur (mmh3_) hash. Bloom filter is a
-space-efficient probabilistic data structure, is used to test whether an
-element is a member of a set.
+Forked from https://github.com/jettify/aioredis_bloom
 
 
 Basic api:
@@ -33,10 +23,10 @@ Basic api:
         error_rate = 0.0001  # expected error rate
         # size of underlying array is calculated from capacity and error_rate
         bloom = BloomFilter(redis, 100000, 0.0001)
-        yield from bloom.add('python')
-        yield from bloom.add('asyncio')
-        result = yield from bloom.contains('tornado')
-        assert result==False
+        keys = ['python', 'asyncio', 'foo']
+        yield from bloom.add_keys(keys)
+        result = yield from bloom.contains_keys(['tornado'])
+        assert result == [False]
 
         redis.close()
     loop.run_until_complete(go())
@@ -100,26 +90,3 @@ Requirements
 * asyncio_ or Python_ 3.4+
 * aioredis_
 * mmh3_
-
-
-Thanks
-------
-I've learned a lot from following projects:
-
-* https://github.com/aio-libs/aioredis
-* https://github.com/jaybaird/python-bloomfilter
-* https://github.com/dariajung/bloom
-* https://github.com/bkz/bloom
-* https://github.com/acruise/cassandra-bloom-filter
-
-
-License
--------
-
-The *aioredis_bloom* is offered under MIT license.
-
-.. _Python: https://www.python.org
-.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
-.. _aioredis: https://github.com/aio-libs/aioredis
-.. _mmh3: https://pypi.python.org/pypi/mmh3/
-.. _Bloom: http://en.wikipedia.org/wiki/Bloom_filter

@@ -193,3 +193,40 @@ class BloomFilter:
 
         if self.error_rate != other_bloom.error_rate:
             raise ValueError('Error rate of both bloom filters must be equal')
+
+    def _set_bits_pipe(self, key, bit_positions, pipe):
+        script_set_bits = """
+        for _, arg in ipairs(ARGV) do
+            redis.call('SETBIT', KEYS[1], arg, 1)
+        end
+        """
+        pipe.eval(script_set_bits, [key], bit_positions)
+
+    def _check_bits_pipe(self, key, bit_positions, pipe):
+        script_check_bits = """
+        for _, arg in ipairs(ARGV) do
+            if redis.call('GETBIT', KEYS[1], arg) == 0
+            then
+                return 0
+            end
+        end
+        return 1
+        """
+        pipe.eval(script_check_bits, [key], bit_positions)
+
+    @asyncio.coroutine
+    def contains_keys(self, keys):
+        pipe = self._conn.pipeline()
+        for key in keys:
+            bit_positions = self._calc_bit_positions(key)
+            self._check_bits_pipe(self._redis_key, bit_positions, pipe)
+        results = yield from pipe.execute()
+        return [True if x == 1 else False for x in results]
+
+    @asyncio.coroutine
+    def add_keys(self, keys):
+        pipe = self._conn.pipeline()
+        for key in keys:
+            bit_positions = self._calc_bit_positions(key)
+            self._set_bits_pipe(self._redis_key, bit_positions, pipe)
+        yield from pipe.execute()
